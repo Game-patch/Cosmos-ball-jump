@@ -1,0 +1,58 @@
+body {
+    margin: 0;
+    padding: 0;
+    background: linear-gradient(135deg, #0c0c2b 0%, #1a1a40 50%, #0c0c2b 100%);
+    font-family: 'Arial', sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    overflow: hidden;
+    color: #e0e0ff;
+}
+
+#gameContainer {
+    position: relative;
+    border: 2px solid #4a4a8a;
+    border-radius: 10px;
+    box-shadow: 0 0 20px rgba(100, 80, 255, 0.5),
+                inset 0 0 20px rgba(50, 30, 150, 0.3);
+    overflow: hidden;
+}
+
+#gameCanvas {
+    display: block;
+    background: radial-gradient(ellipse at center, #0a0a20 0%, #050510 100%);
+}
+
+#ui {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+    z-index: 10;
+}
+
+#score, #highScore, #combo {
+    font-size: 24px;
+    text-shadow: 0 0 10px #6a6aff, 0 0 20px #4a4aff;
+    margin-bottom: 10px;
+    background: rgba(10, 10, 40, 0.7);
+    padding: 10px 15px;
+    border-radius: 10px;
+    border: 1px solid #5a5aaa;
+}
+
+#combo {
+    color: #ff8080;
+    text-shadow: 0 0 10px #ff4040, 0 0 20px #ff2020;
+}
+
+#speed {
+    color: #40ffff;
+    text-shadow: 0 0 10px #40c0ff, 0 0 20px #40a0ff;
+    font-size: 20px;
+    background: rgba(10, 10, 40, 0.7);
+    padding: 8px 15px;
+    border-radius: 10px;
+    border: 1px solid #5a5aaa;
+}
