@@ -126,10 +126,7 @@ class Player {
             this.y = canvas.height - this.radius; // Position exactly at boundary
             this.velocityY = -Math.abs(this.velocityY) * 0.7; // Bounce with energy retention
             createParticles(this.x, this.y, 5, '#6a6aff'); // Visual feedback
-            // Trigger game over when hitting bottom
-            setTimeout(() => {
-                gameOver();
-            }, 100);
+            // Removed game over when hitting bottom
         }
         
         // Update trail
@@ -266,11 +263,11 @@ class Player {
                     createParticles(canvas.width/2, canvas.height/2, 50, '#ff4040');
                 }
             }
+        } else {
+            // Ensure score display is always updated even when score doesn't increase
+            document.getElementById('score').textContent = `Score: ${score}`;
+            document.getElementById('highScore').textContent = `High Score: ${highScore}`;
         }
-        
-        // Ensure score display is always updated (fix for potential display issues)
-        document.getElementById('score').textContent = `Score: ${score}`;
-        document.getElementById('highScore').textContent = `High Score: ${highScore}`;
         
         // Prevent negative scores
         if (score < 0) score = 0;
@@ -377,10 +374,7 @@ class Player {
                 score = Math.max(0, score - 50);
                 this.velocityY = JUMP_FORCE * 0.7;
                 createParticles(this.x, this.y, 25, '#ff4040');
-                // Trigger game over if hit by spike
-                setTimeout(() => {
-                    gameOver();
-                }, 100);
+                // Removed game over if hit by spike
                 break;
                 
             case HAZARD_TYPES.DARK_VOID:
@@ -1054,29 +1048,49 @@ class Player {
         switch (powerUp.type) {
             case POWER_UP_TYPES.STARDUST:
                 // Small points, no special duration
+                // Points already added at beginning of function
                 break;
             case POWER_UP_TYPES.CRYSTAL:
                 // Shield now has balanced duration
-                this.shieldTime = 450; // 7.5 seconds (was 600)
+                this.hasShield = true;
+                this.shieldTime = 300; // 5 seconds (was 450)
                 break;
             case POWER_UP_TYPES.PULSAR:
-                // Pulsar gives 2 extra jumps instead of unlimited
-                this.maxJumps = Math.min(4, this.maxJumps + 1); // Cap at 4 jumps
+                // Pulsar gives 1 extra jump with cap
+                this.maxJumps = Math.min(3, this.maxJumps + 1); // Cap at 3 jumps
                 break;
             case POWER_UP_TYPES.TIME_WARP:
                 // Balanced time warp duration
-                gameSpeed = 0.5; // Was 0.3 (now 0.5)
-                setTimeout(() => gameSpeed = 1, TIME_WARP_DURATION * 0.8); // Slightly shorter duration
+                gameSpeed = 0.7; // Less slow down (was 0.5)
+                setTimeout(() => {
+                    gameSpeed = 1;
+                    // Remove from active power-ups when duration ends
+                    if (this.activePowerUps) {
+                        this.activePowerUps.delete(POWER_UP_TYPES.TIME_WARP);
+                    }
+                }, TIME_WARP_DURATION * 0.6); // Shorter duration
                 break;
             case POWER_UP_TYPES.MAGNET:
                 // Balanced magnet duration
                 this.hasMagnet = true;
-                setTimeout(() => this.hasMagnet = false, MAGNET_DURATION * 0.75); // Shorter duration
+                setTimeout(() => {
+                    this.hasMagnet = false;
+                    // Remove from active power-ups when duration ends
+                    if (this.activePowerUps) {
+                        this.activePowerUps.delete(POWER_UP_TYPES.MAGNET);
+                    }
+                }, MAGNET_DURATION * 0.5); // Shorter duration
                 break;
             case POWER_UP_TYPES.NEBULA_SHIFT:
                 // Balanced phasing duration
                 this.isPhasing = true;
-                setTimeout(() => this.isPhasing = false, 2500); // 2.5 seconds (was 3000)
+                setTimeout(() => {
+                    this.isPhasing = false;
+                    // Remove from active power-ups when duration ends
+                    if (this.activePowerUps) {
+                        this.activePowerUps.delete(POWER_UP_TYPES.NEBULA_SHIFT);
+                    }
+                }, 1500); // 1.5 seconds (was 2500)
                 break;
         }
         
@@ -1549,19 +1563,18 @@ class PowerUp {
         ctx.beginPath();
         ctx.arc(this.x, floatY, this.radius, 0, Math.PI * 2);
         
-        // Enhanced pulsing effect
-        const pulse = Math.abs(Math.sin(Date.now() * 0.01 + this.pulsePhase)) * 0.5 + 0.5;
+        // Consistent glow effect (no pulsing)
         ctx.shadowColor = this.color;
-        ctx.shadowBlur = 20 * pulse;
+        ctx.shadowBlur = 15; // Consistent glow
         ctx.fillStyle = this.color;
         ctx.fill();
         
         // Add rotating ring effect
         ctx.beginPath();
-        ctx.arc(this.x, floatY, this.radius * (1.2 + pulse * 0.3), 0, Math.PI * 2);
+        ctx.arc(this.x, floatY, this.radius * 1.3, 0, Math.PI * 2);
         ctx.strokeStyle = this.color;
         ctx.lineWidth = 1;
-        ctx.globalAlpha = pulse * 0.3;
+        ctx.globalAlpha = 0.5;
         ctx.stroke();
         
         // Reset shadow
@@ -2010,16 +2023,17 @@ function createInitialPlatforms() {
     // Starting platform
     platforms.push(new Platform(canvas.width/2 - PLATFORM_WIDTH/2, canvas.height - 50, PLATFORM_TYPES.STAR));
     
-    // Generate platforms going upward with equal spacing and no overlap
-    const verticalSpacing = 100; // Equal vertical gap between platforms
+    // Generate platforms going upward with proper spacing and no overlap
+    const verticalSpacing = 120; // Increased vertical gap between platforms
     
     for (let y = canvas.height - 150; y > -2000; y -= verticalSpacing) {
-        // Randomly decide how many platforms in this row
-        const platformsInThisRow = Math.floor(Math.random() * 3) + 1;
+        // Limit platforms to max 2 per row to reduce overlap chance
+        const platformsInThisRow = Math.min(2, Math.floor(Math.random() * 2) + 1);
         
         for (let i = 0; i < platformsInThisRow; i++) {
-            // Random x position that ensures no overlap
-            const x = Math.random() * (canvas.width - PLATFORM_WIDTH);
+            // Calculate x position with proper spacing
+            const horizontalSpacing = (canvas.width - (platformsInThisRow * PLATFORM_WIDTH)) / (platformsInThisRow + 1);
+            const x = horizontalSpacing + i * (PLATFORM_WIDTH + horizontalSpacing);
             const type = getRandomPlatformType();
             platforms.push(new Platform(x, y, type));
         }
@@ -2046,20 +2060,16 @@ function generateNewPlatforms() {
     
     // Generate new platforms if needed
     if (highestPlatform > -canvas.height * 2) {
-        const verticalSpacing = 100; // Equal vertical gap between platforms
-        const horizontalSpacing = PLATFORM_WIDTH + 20; // Equal horizontal gap between platforms (20px gap)
-        const platformsPerRow = Math.floor(canvas.width / horizontalSpacing);
+        const verticalSpacing = 120; // Increased vertical gap between platforms
         
         for (let y = highestPlatform - verticalSpacing; y > highestPlatform - 300; y -= verticalSpacing) {
-            // Create platforms with equal spacing
-            const platformsInThisRow = Math.min(platformsPerRow, Math.floor(Math.random() * 3) + 1);
-            
-            // Calculate positions to ensure equal spacing
-            const totalWidth = platformsInThisRow * PLATFORM_WIDTH + (platformsInThisRow - 1) * 20;
-            const startX = (canvas.width - totalWidth) / 2;
+            // Limit platforms to max 2 per row to reduce overlap chance
+            const platformsInThisRow = Math.min(2, Math.floor(Math.random() * 2) + 1);
             
             for (let i = 0; i < platformsInThisRow; i++) {
-                const x = startX + i * horizontalSpacing;
+                // Calculate x position with proper spacing
+                const horizontalSpacing = (canvas.width - (platformsInThisRow * PLATFORM_WIDTH)) / (platformsInThisRow + 1);
+                const x = horizontalSpacing + i * (PLATFORM_WIDTH + horizontalSpacing);
                 const type = getRandomPlatformType();
                 platforms.push(new Platform(x, y, type));
             }
