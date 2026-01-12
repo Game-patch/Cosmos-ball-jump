@@ -1,6 +1,6 @@
 // Game constants
-const GRAVITY = 0.5;
-const JUMP_FORCE = -12;
+const GRAVITY = 0.5;// gravity
+const JUMP_FORCE = -12; // jump force
 const PLAYER_SIZE = 20;
 const PLATFORM_WIDTH = 100;
 const PLATFORM_HEIGHT = 20;
@@ -108,24 +108,28 @@ class Player {
         // Keep ball within canvas boundaries with proper bouncing (no sticking)
         // Horizontal boundaries
         if (this.x < this.radius) {
-            this.x = this.radius + 1; // Move slightly away from edge
+            this.x = this.radius; // Position exactly at boundary
             this.velocityX = Math.abs(this.velocityX) * 0.7; // Bounce with energy retention
             createParticles(this.x, this.y, 5, '#6a6aff'); // Visual feedback
         } else if (this.x > canvas.width - this.radius) {
-            this.x = canvas.width - this.radius - 1; // Move slightly away from edge
+            this.x = canvas.width - this.radius; // Position exactly at boundary
             this.velocityX = -Math.abs(this.velocityX) * 0.7; // Bounce with energy retention
             createParticles(this.x, this.y, 5, '#6a6aff'); // Visual feedback
         }
         
         // Vertical boundaries (top and bottom)
         if (this.y < this.radius) {
-            this.y = this.radius + 1; // Move slightly away from edge
+            this.y = this.radius; // Position exactly at boundary
             this.velocityY = Math.abs(this.velocityY) * 0.7; // Bounce with energy retention
             createParticles(this.x, this.y, 5, '#6a6aff'); // Visual feedback
         } else if (this.y > canvas.height - this.radius) {
-            this.y = canvas.height - this.radius - 1; // Move slightly away from edge
+            this.y = canvas.height - this.radius; // Position exactly at boundary
             this.velocityY = -Math.abs(this.velocityY) * 0.7; // Bounce with energy retention
             createParticles(this.x, this.y, 5, '#6a6aff'); // Visual feedback
+            // Trigger game over when hitting bottom
+            setTimeout(() => {
+                gameOver();
+            }, 100);
         }
         
         // Update trail
@@ -267,6 +271,10 @@ class Player {
         // Ensure score display is always updated (fix for potential display issues)
         document.getElementById('score').textContent = `Score: ${score}`;
         document.getElementById('highScore').textContent = `High Score: ${highScore}`;
+        
+        // Prevent negative scores
+        if (score < 0) score = 0;
+        if (highScore < 0) highScore = 0;
     }
     
     // New method to check if we should snap to a platform
@@ -346,9 +354,6 @@ class Player {
     }
     
     hitHazard(hazard) {
-        // Check if this is a spike platform collision (not a real hazard)
-        const isSpikePlatform = hazard.type === HAZARD_TYPES.ASTEROID_SPIKE && !hazard.width;
-        
         if (this.isInvincible) {
             // Just create particles but don't apply damage
             createParticles(this.x, this.y, 20, '#ffffff');
@@ -372,6 +377,10 @@ class Player {
                 score = Math.max(0, score - 50);
                 this.velocityY = JUMP_FORCE * 0.7;
                 createParticles(this.x, this.y, 25, '#ff4040');
+                // Trigger game over if hit by spike
+                setTimeout(() => {
+                    gameOver();
+                }, 100);
                 break;
                 
             case HAZARD_TYPES.DARK_VOID:
@@ -388,13 +397,15 @@ class Player {
                 break;
         }
         
+        // Ensure score doesn't go below 0
+        if (score < 0) score = 0;
         document.getElementById('score').textContent = `Score: ${score}`;
     }
     
     handlePlatformCollision(platform) {
         // If it's a spike platform, treat it as a hazard
         if (platform.type === PLATFORM_TYPES.SPIKE || platform.type === PLATFORM_TYPES.SPIKE_TWISTED) {
-            this.hitHazard({type: HAZARD_TYPES.ASTEROID_SPIKE});
+            this.hitHazard({type: HAZARD_TYPES.ASTEROID_SPIKE, width: platform.width, height: platform.height, x: platform.x, y: platform.y});
             return;
         }
         
@@ -402,7 +413,7 @@ class Player {
         switch (platform.type) {
             case PLATFORM_TYPES.NEBULA:
                 // Bouncy platform
-                if (this.velocityY > 0) {
+                if (this.velocityY > 0 && !this.onGround) { // Prevent multiple collisions
                     this.velocityY = JUMP_FORCE * NEBULA_BOUNCE_MULTIPLIER;
                     this.onGround = true;
                     this.jumps = 0;
@@ -430,7 +441,7 @@ class Player {
                 
             case PLATFORM_TYPES.METEOR:
                 // Fragile platform - break after landing
-                if (this.velocityY > 0) {
+                if (this.velocityY > 0 && !this.onGround) { // Prevent multiple collisions
                     this.velocityY = JUMP_FORCE;
                     this.onGround = true;
                     this.jumps = 0;
@@ -458,7 +469,7 @@ class Player {
                 
             case PLATFORM_TYPES.BLACK_HOLE:
                 // Gravity reversal
-                if (this.velocityY > 0) {
+                if (this.velocityY > 0 && !this.onGround) { // Prevent multiple collisions
                     this.velocityY = JUMP_FORCE;
                     this.onGround = true;
                     this.jumps = 0;
@@ -487,7 +498,7 @@ class Player {
                 
             case PLATFORM_TYPES.COMET:
                 // Slippery platform - high speed
-                if (this.velocityY > 0) {
+                if (this.velocityY > 0 && !this.onGround) { // Prevent multiple collisions
                     this.velocityY = JUMP_FORCE * 0.8;
                     this.onGround = true;
                     this.jumps = 0;
@@ -515,7 +526,7 @@ class Player {
                 
             case PLATFORM_TYPES.STAR:
                 // Healing platform
-                if (this.velocityY > 0) {
+                if (this.velocityY > 0 && !this.onGround) { // Prevent multiple collisions
                     this.velocityY = JUMP_FORCE;
                     this.onGround = true;
                     this.jumps = 0;
@@ -565,6 +576,10 @@ class Player {
     }
 
     collectPowerUp(powerUp) {
+        // Mark power-up as collected to prevent double collection
+        if (powerUp.collected) return;
+        powerUp.collected = true;
+        
         switch (powerUp.type) {
             case POWER_UP_TYPES.STARDUST:
                 score += 50;
@@ -672,11 +687,15 @@ class Player {
                 }
                 break;
         }
+        
+        // Ensure score doesn't go below 0
+        if (score < 0) score = 0;
         document.getElementById('score').textContent = `Score: ${score}`;
         
         // Bonus for collecting while invincible
         if (this.isInvincible) {
             score += 100;
+            if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 15, '#ffffff');
         }
@@ -684,6 +703,7 @@ class Player {
         // Bonus for collecting while phasing
         if (this.isPhasing) {
             score += 50;
+            if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 10, '#a040ff');
         }
@@ -691,6 +711,7 @@ class Player {
         // Bonus for collecting while magnet is active
         if (this.hasMagnet) {
             score += 30;
+            if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 8, '#ff8080');
         }
@@ -698,6 +719,7 @@ class Player {
         // Bonus for collecting while shielded
         if (this.hasShield) {
             score += 20;
+            if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 6, '#80ffff');
         }
@@ -705,6 +727,7 @@ class Player {
         // Bonus for collecting during high speed
         if (gameSpeed > 1.5) {
             score += 75;
+            if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 12, '#ff4040');
         }
@@ -712,6 +735,7 @@ class Player {
         // Bonus for collecting during slow speed
         if (gameSpeed < 0.5) {
             score += 150;
+            if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 18, '#40ffff');
         }
@@ -719,6 +743,7 @@ class Player {
         // Bonus for collecting while on the ground
         if (this.onGround) {
             score += 25;
+            if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 5, '#ffffff');
         }
@@ -726,6 +751,7 @@ class Player {
         // Bonus for collecting while in the air
         if (!this.onGround) {
             score += 40;
+            if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 8, '#a0a0ff');
         }
@@ -733,6 +759,7 @@ class Player {
         // Bonus for collecting while moving fast horizontally
         if (Math.abs(this.velocityX) > 6) {
             score += 60;
+            if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 10, '#40a0ff');
         }
@@ -740,6 +767,7 @@ class Player {
         // Bonus for collecting while moving fast vertically
         if (Math.abs(this.velocityY) > 8) {
             score += 60;
+            if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 10, '#ff40a0');
         }
@@ -747,6 +775,7 @@ class Player {
         // Bonus for collecting near the top of the screen
         if (this.y < canvas.height * 0.3) {
             score += 80;
+            if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 15, '#d080ff');
         }
@@ -754,6 +783,7 @@ class Player {
         // Bonus for collecting near the bottom of the screen
         if (this.y > canvas.height * 0.7) {
             score += 80;
+            if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 15, '#40ff80');
         }
@@ -761,6 +791,7 @@ class Player {
         // Bonus for collecting near the edges of the screen
         if (this.x < canvas.width * 0.2 || this.x > canvas.width * 0.8) {
             score += 70;
+            if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 12, '#ff8040');
         }
@@ -768,6 +799,7 @@ class Player {
         // Bonus for collecting in the center of the screen
         if (this.x > canvas.width * 0.4 && this.x < canvas.width * 0.6) {
             score += 90;
+            if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 18, '#8040ff');
         }
@@ -780,6 +812,7 @@ class Player {
             // Bonus for quick collection
             if (this.quickCollectCombo >= 3) {
                 score += this.quickCollectCombo * 20;
+                if (score < 0) score = 0; // Ensure score doesn't go below 0
                 document.getElementById('score').textContent = `Score: ${score}`;
                 
                 // Visual effect
@@ -800,6 +833,7 @@ class Player {
             // Bonus for collecting same type multiple times
             if (this.sameTypeStreak >= 3) {
                 score += this.sameTypeStreak * 30;
+                if (score < 0) score = 0; // Ensure score doesn't go below 0
                 document.getElementById('score').textContent = `Score: ${score}`;
                 createParticles(this.x, this.y, 15, '#ffffff');
             }
@@ -831,6 +865,7 @@ class Player {
             
             if (isAlternating && this.powerUpSequence.length >= 4) {
                 score += 200;
+                if (score < 0) score = 0; // Ensure score doesn't go below 0
                 document.getElementById('score').textContent = `Score: ${score}`;
                 createParticles(this.x, this.y, 30, '#ffff80');
             }
@@ -846,6 +881,7 @@ class Player {
         combo++;
         if (combo % 5 === 0) {
             score += combo * 10; // Combo bonus
+            if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             
             // Special effect for high combo
@@ -890,12 +926,14 @@ class Player {
         // Bonus for collecting power-ups at high combo
         if (combo > 30) {
             score += combo;
+            if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
         }
         
         // Bonus for collecting power-ups while at maximum jumps
         if (this.jumps >= this.maxJumps) {
             score += 100;
+            if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 20, '#ff80ff');
         }
@@ -903,6 +941,7 @@ class Player {
         // Bonus for collecting power-ups while at low jumps (fresh start)
         if (this.jumps === 0) {
             score += 50;
+            if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 10, '#40ff40');
         }
@@ -910,6 +949,7 @@ class Player {
         // Bonus for collecting power-ups after a long time (patience reward)
         if (this.lastPowerUpTime > 0 && Date.now() - this.lastPowerUpTime > 5000) {
             score += 150;
+            if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 25, '#ffff40');
         }
@@ -917,6 +957,7 @@ class Player {
         // Bonus for collecting power-ups in quick succession (speed reward)
         if (this.lastPowerUpTime > 0 && Date.now() - this.lastPowerUpTime < 500) {
             score += 100;
+            if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 20, '#40ffff');
         }
@@ -924,6 +965,7 @@ class Player {
         // Bonus for collecting power-ups with a full combo
         if (this.quickCollectCombo >= 5) {
             score += 200;
+            if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 30, '#ff40ff');
         }
@@ -943,6 +985,7 @@ class Player {
             
             // Bonus points
             score += 500;
+            if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             
             // Reset collected power-ups
@@ -1716,19 +1759,14 @@ function createInitialPlatforms() {
     
     // Generate platforms going upward with equal spacing and no overlap
     const verticalSpacing = 100; // Equal vertical gap between platforms
-    const horizontalSpacing = PLATFORM_WIDTH + 20; // Equal horizontal gap between platforms (20px gap)
-    const platformsPerRow = Math.floor(canvas.width / horizontalSpacing);
     
     for (let y = canvas.height - 150; y > -2000; y -= verticalSpacing) {
-        // Create platforms with equal spacing
-        const platformsInThisRow = Math.min(platformsPerRow, Math.floor(Math.random() * 3) + 1);
-        
-        // Calculate positions to ensure equal spacing
-        const totalWidth = platformsInThisRow * PLATFORM_WIDTH + (platformsInThisRow - 1) * 20;
-        const startX = (canvas.width - totalWidth) / 2;
+        // Randomly decide how many platforms in this row
+        const platformsInThisRow = Math.floor(Math.random() * 3) + 1;
         
         for (let i = 0; i < platformsInThisRow; i++) {
-            const x = startX + i * horizontalSpacing;
+            // Random x position that ensures no overlap
+            const x = Math.random() * (canvas.width - PLATFORM_WIDTH);
             const type = getRandomPlatformType();
             platforms.push(new Platform(x, y, type));
         }
@@ -1738,13 +1776,6 @@ function createInitialPlatforms() {
             const x = Math.random() * (canvas.width - 50) + 25;
             const type = getRandomPowerUpType();
             powerUps.push(new PowerUp(x, y - 30, type));
-        }
-        
-        // Occasionally add hazards
-        if (Math.random() > 0.8) {
-            const x = Math.random() * (canvas.width - 50) + 25;
-            const type = getRandomHazardType();
-            hazards.push(new Hazard(x, y - 60, type));
         }
         
         // Occasionally add hazards
