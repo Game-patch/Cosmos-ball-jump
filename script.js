@@ -580,6 +580,46 @@ class Player {
         if (powerUp.collected) return;
         powerUp.collected = true;
         
+        // Check for power-up uniqueness to prevent stacking
+        if (this.activePowerUps) {
+            // Prevent collecting same power-up type if already active
+            if (this.activePowerUps.has(powerUp.type)) {
+                // Just give points but don't activate the power-up again
+                switch (powerUp.type) {
+                    case POWER_UP_TYPES.STARDUST:
+                        score += 25; // Reduced points for duplicate
+                        createParticles(this.x, this.y, 8, '#ffff80');
+                        break;
+                    case POWER_UP_TYPES.CRYSTAL:
+                        score += 30; // Reduced points for duplicate
+                        createParticles(this.x, this.y, 10, '#80ffff');
+                        break;
+                    case POWER_UP_TYPES.PULSAR:
+                        score += 35; // Reduced points for duplicate
+                        createParticles(this.x, this.y, 12, '#ff80ff');
+                        break;
+                    case POWER_UP_TYPES.TIME_WARP:
+                        score += 40; // Reduced points for duplicate
+                        createParticles(this.x, this.y, 15, '#40ffff');
+                        break;
+                    case POWER_UP_TYPES.MAGNET:
+                        score += 35; // Reduced points for duplicate
+                        createParticles(this.x, this.y, 12, '#ff8080');
+                        break;
+                    case POWER_UP_TYPES.NEBULA_SHIFT:
+                        score += 40; // Reduced points for duplicate
+                        createParticles(this.x, this.y, 15, '#a040ff');
+                        break;
+                }
+                return; // Don't activate duplicate power-up
+            }
+        } else {
+            this.activePowerUps = new Set();
+        }
+        
+        // Add this power-up type to active set
+        this.activePowerUps.add(powerUp.type);
+        
         switch (powerUp.type) {
             case POWER_UP_TYPES.STARDUST:
                 score += 50;
@@ -603,7 +643,7 @@ class Player {
                 
             case POWER_UP_TYPES.CRYSTAL:
                 this.hasShield = true;
-                this.shieldTime = 600; // 10 seconds
+                this.shieldTime = 450; // 7.5 seconds (was 600)
                 createParticles(this.x, this.y, 20, '#80ffff');
                 
                 // Track crystal collection
@@ -618,7 +658,7 @@ class Player {
                 break;
                 
             case POWER_UP_TYPES.PULSAR:
-                this.maxJumps = 3;
+                this.maxJumps = Math.min(4, this.maxJumps + 1); // Cap at 4 jumps
                 this.jumps = 0; // Reset jumps
                 createParticles(this.x, this.y, 25, '#ff80ff');
                 
@@ -628,14 +668,20 @@ class Player {
                 
                 // Extra jump when collecting many pulsars
                 if (this.pulsarCount % 3 === 0) {
-                    this.maxJumps++;
+                    this.maxJumps = Math.min(4, this.maxJumps + 1);
                     createParticles(this.x, this.y, 30, '#ffffff');
                 }
                 break;
                 
             case POWER_UP_TYPES.TIME_WARP:
-                gameSpeed = 0.3; // Slow down game
-                setTimeout(() => gameSpeed = 1, TIME_WARP_DURATION);
+                gameSpeed = 0.5; // Was 0.3 (now 0.5)
+                setTimeout(() => {
+                    gameSpeed = 1;
+                    // Remove from active power-ups when duration ends
+                    if (this.activePowerUps) {
+                        this.activePowerUps.delete(POWER_UP_TYPES.TIME_WARP);
+                    }
+                }, TIME_WARP_DURATION * 0.8);
                 createParticles(this.x, this.y, 30, '#40ffff');
                 
                 // Track time warp collection
@@ -657,7 +703,13 @@ class Player {
                 
             case POWER_UP_TYPES.MAGNET:
                 this.hasMagnet = true;
-                setTimeout(() => this.hasMagnet = false, MAGNET_DURATION);
+                setTimeout(() => {
+                    this.hasMagnet = false;
+                    // Remove from active power-ups when duration ends
+                    if (this.activePowerUps) {
+                        this.activePowerUps.delete(POWER_UP_TYPES.MAGNET);
+                    }
+                }, MAGNET_DURATION * 0.75);
                 createParticles(this.x, this.y, 25, '#ff8080');
                 
                 // Track magnet collection
@@ -673,7 +725,13 @@ class Player {
                 
             case POWER_UP_TYPES.NEBULA_SHIFT:
                 this.isPhasing = true;
-                setTimeout(() => this.isPhasing = false, 3000);
+                setTimeout(() => {
+                    this.isPhasing = false;
+                    // Remove from active power-ups when duration ends
+                    if (this.activePowerUps) {
+                        this.activePowerUps.delete(POWER_UP_TYPES.NEBULA_SHIFT);
+                    }
+                }, 2500);
                 createParticles(this.x, this.y, 35, '#a040ff');
                 
                 // Track nebula shift collection
@@ -990,6 +1048,36 @@ class Player {
             
             // Reset collected power-ups
             this.collectedPowerUps.clear();
+        }
+        
+        // Balance power-up durations based on type
+        switch (powerUp.type) {
+            case POWER_UP_TYPES.STARDUST:
+                // Small points, no special duration
+                break;
+            case POWER_UP_TYPES.CRYSTAL:
+                // Shield now has balanced duration
+                this.shieldTime = 450; // 7.5 seconds (was 600)
+                break;
+            case POWER_UP_TYPES.PULSAR:
+                // Pulsar gives 2 extra jumps instead of unlimited
+                this.maxJumps = Math.min(4, this.maxJumps + 1); // Cap at 4 jumps
+                break;
+            case POWER_UP_TYPES.TIME_WARP:
+                // Balanced time warp duration
+                gameSpeed = 0.5; // Was 0.3 (now 0.5)
+                setTimeout(() => gameSpeed = 1, TIME_WARP_DURATION * 0.8); // Slightly shorter duration
+                break;
+            case POWER_UP_TYPES.MAGNET:
+                // Balanced magnet duration
+                this.hasMagnet = true;
+                setTimeout(() => this.hasMagnet = false, MAGNET_DURATION * 0.75); // Shorter duration
+                break;
+            case POWER_UP_TYPES.NEBULA_SHIFT:
+                // Balanced phasing duration
+                this.isPhasing = true;
+                setTimeout(() => this.isPhasing = false, 2500); // 2.5 seconds (was 3000)
+                break;
         }
         
         document.getElementById('combo').textContent = `Combo: ${combo}`;
@@ -1421,6 +1509,11 @@ class PowerUp {
         this.radius = 10;
         this.color = this.getColor();
         this.angle = 0;
+        this.pulsePhase = Math.random() * Math.PI * 2; // Unique phase for pulsing
+        this.rotationSpeed = (Math.random() - 0.5) * 0.1; // Random rotation
+        this.floatOffset = Math.random() * 10; // Floating offset
+        this.floatSpeed = 0.05 + Math.random() * 0.05; // Floating speed
+        this.collected = false; // Track if collected
     }
     
     getColor() {
@@ -1437,70 +1530,150 @@ class PowerUp {
     
     update() {
         this.y += SCROLL_SPEED;
-        this.angle += 0.1;
+        this.angle += this.rotationSpeed;
+        
+        // Update floating animation
+        this.floatOffset = Math.sin(Date.now() * this.floatSpeed) * 5;
+        
         return this.y > canvas.height + 50;
     }
     
     draw() {
-        ctx.beginPath();
-        ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+        // Save context for transformations
+        ctx.save();
         
-        // Pulsing effect
-        const pulse = Math.abs(Math.sin(this.angle)) * 0.5 + 0.5;
+        // Apply floating effect
+        const floatY = this.y + this.floatOffset;
+        
+        // Draw main body
+        ctx.beginPath();
+        ctx.arc(this.x, floatY, this.radius, 0, Math.PI * 2);
+        
+        // Enhanced pulsing effect
+        const pulse = Math.abs(Math.sin(Date.now() * 0.01 + this.pulsePhase)) * 0.5 + 0.5;
         ctx.shadowColor = this.color;
-        ctx.shadowBlur = 15 * pulse;
+        ctx.shadowBlur = 20 * pulse;
         ctx.fillStyle = this.color;
         ctx.fill();
-        ctx.shadowBlur = 0;
         
-        // Type-specific drawing
+        // Add rotating ring effect
+        ctx.beginPath();
+        ctx.arc(this.x, floatY, this.radius * (1.2 + pulse * 0.3), 0, Math.PI * 2);
+        ctx.strokeStyle = this.color;
+        ctx.lineWidth = 1;
+        ctx.globalAlpha = pulse * 0.3;
+        ctx.stroke();
+        
+        // Reset shadow
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+        
+        // Type-specific drawing with enhanced animations
         switch (this.type) {
             case POWER_UP_TYPES.STARDUST:
-                // Sparkle effect
-                ctx.beginPath();
-                ctx.moveTo(this.x, this.y - this.radius);
-                ctx.lineTo(this.x, this.y - this.radius - 5);
-                ctx.moveTo(this.x, this.y + this.radius);
-                ctx.lineTo(this.x, this.y + this.radius + 5);
-                ctx.moveTo(this.x - this.radius, this.y);
-                ctx.lineTo(this.x - this.radius - 5, this.y);
-                ctx.moveTo(this.x + this.radius, this.y);
-                ctx.lineTo(this.x + this.radius + 5, this.y);
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 1;
-                ctx.stroke();
+                // Enhanced sparkle effect
+                ctx.save();
+                ctx.translate(this.x, floatY);
+                ctx.rotate(this.angle * 3);
+                
+                // Draw radiating lines
+                for (let i = 0; i < 8; i++) {
+                    const lineAngle = (i / 8) * Math.PI * 2;
+                    ctx.beginPath();
+                    ctx.moveTo(0, 0);
+                    ctx.lineTo(Math.cos(lineAngle) * (this.radius + 8), Math.sin(lineAngle) * (this.radius + 8));
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                }
+                ctx.restore();
                 break;
                 
             case POWER_UP_TYPES.CRYSTAL:
-                // Crystal facets
+                // Enhanced crystal facets
+                ctx.save();
+                ctx.translate(this.x, floatY);
+                ctx.rotate(this.angle);
+                
+                // Draw multi-faceted crystal
                 ctx.beginPath();
-                ctx.moveTo(this.x, this.y - this.radius);
-                ctx.lineTo(this.x + this.radius * 0.7, this.y);
-                ctx.lineTo(this.x, this.y + this.radius);
-                ctx.lineTo(this.x - this.radius * 0.7, this.y);
+                for (let i = 0; i < 6; i++) {
+                    const angle = (i / 6) * Math.PI * 2;
+                    const x = Math.cos(angle) * this.radius * 1.2;
+                    const y = Math.sin(angle) * this.radius * 1.2;
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
                 ctx.closePath();
                 ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1.5;
+                ctx.stroke();
+                
+                // Inner crystal
+                ctx.beginPath();
+                for (let i = 0; i < 4; i++) {
+                    const angle = (i / 4) * Math.PI * 2 + this.angle;
+                    const x = Math.cos(angle) * this.radius * 0.6;
+                    const y = Math.sin(angle) * this.radius * 0.6;
+                    if (i === 0) {
+                        ctx.moveTo(x, y);
+                    } else {
+                        ctx.lineTo(x, y);
+                    }
+                }
+                ctx.closePath();
+                ctx.strokeStyle = '#ffffaa';
                 ctx.lineWidth = 1;
                 ctx.stroke();
+                
+                ctx.restore();
                 break;
                 
             case POWER_UP_TYPES.PULSAR:
-                // Pulsar rings
+                // Enhanced pulsar with rotating rings
+                ctx.save();
+                ctx.translate(this.x, floatY);
+                
+                // Outer rotating rings
+                for (let i = 0; i < 3; i++) {
+                    ctx.beginPath();
+                    const ringRadius = this.radius * (0.4 + i * 0.4);
+                    const ringAngle = this.angle * (i + 1);
+                    
+                    // Draw partial circle
+                    ctx.arc(0, 0, ringRadius, ringAngle, ringAngle + Math.PI * 0.8);
+                    ctx.strokeStyle = `rgba(255, 128, 255, ${0.7 - i * 0.2})`;
+                    ctx.lineWidth = 1.5 - i * 0.3;
+                    ctx.stroke();
+                }
+                
+                // Center
                 ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius * 0.7, 0, Math.PI * 2);
-                ctx.stroke();
-                ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius * 0.4, 0, Math.PI * 2);
-                ctx.stroke();
+                ctx.arc(0, 0, this.radius * 0.3, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+                
+                ctx.restore();
                 break;
                 
             case POWER_UP_TYPES.TIME_WARP:
-                // Time warp spiral
+                // Enhanced time warp spiral
+                ctx.save();
+                ctx.translate(this.x, floatY);
+                
+                // Spiral effect
                 ctx.beginPath();
-                for (let i = 0; i < 3; i++) {
-                    const angle = this.angle + i * Math.PI / 3;
-                    const x = this.x + Math.cos(angle) * this.radius * 0.7;
-                    const y = this.y + Math.sin(angle) * this.radius * 0.7;
+                const spiralPoints = 20;
+                for (let i = 0; i < spiralPoints; i++) {
+                    const t = i / spiralPoints;
+                    const angle = t * Math.PI * 4 + this.angle;
+                    const r = this.radius * 0.3 * t;
+                    const x = Math.cos(angle) * r;
+                    const y = Math.sin(angle) * r;
+                    
                     if (i === 0) {
                         ctx.moveTo(x, y);
                     } else {
@@ -1508,44 +1681,124 @@ class PowerUp {
                     }
                 }
                 ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 2;
+                ctx.lineWidth = 1.5;
                 ctx.stroke();
+                
+                // Rotating triangles
+                for (let i = 0; i < 3; i++) {
+                    const triAngle = this.angle + (i * Math.PI * 2 / 3);
+                    const dist = this.radius * 0.8;
+                    const tx = Math.cos(triAngle) * dist;
+                    const ty = Math.sin(triAngle) * dist;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(tx, ty);
+                    ctx.lineTo(tx + Math.cos(triAngle) * 8, ty + Math.sin(triAngle) * 8);
+                    ctx.lineTo(tx + Math.cos(triAngle + 2.5) * 6, ty + Math.sin(triAngle + 2.5) * 6);
+                    ctx.closePath();
+                    ctx.fillStyle = '#40ffff';
+                    ctx.fill();
+                }
+                
+                ctx.restore();
                 break;
                 
             case POWER_UP_TYPES.MAGNET:
-                // Magnet field lines
+                // Enhanced magnet with field lines
+                ctx.save();
+                ctx.translate(this.x, floatY);
+                ctx.rotate(this.angle);
+                
+                // Central magnet
                 ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius * 0.5, 0, Math.PI * 2);
-                ctx.moveTo(this.x - this.radius * 0.7, this.y);
-                ctx.lineTo(this.x + this.radius * 0.7, this.y);
-                ctx.moveTo(this.x, this.y - this.radius * 0.7);
-                ctx.lineTo(this.x, this.y + this.radius * 0.7);
-                ctx.strokeStyle = '#ffffff';
-                ctx.lineWidth = 2;
-                ctx.stroke();
+                ctx.arc(0, 0, this.radius * 0.5, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+                
+                // Magnetic field lines
+                for (let i = 0; i < 4; i++) {
+                    const angle = (i / 4) * Math.PI * 2;
+                    const startX = Math.cos(angle) * this.radius * 0.7;
+                    const startY = Math.sin(angle) * this.radius * 0.7;
+                    const endX = Math.cos(angle) * this.radius * 1.5;
+                    const endY = Math.sin(angle) * this.radius * 1.5;
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(startX, startY);
+                    ctx.lineTo(endX, endY);
+                    ctx.strokeStyle = '#ff8080';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+                    
+                    // Arrow heads
+                    const arrowAngle = angle;
+                    const arrowSize = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(endX, endY);
+                    ctx.lineTo(
+                        endX + Math.cos(arrowAngle + 0.5) * arrowSize,
+                        endY + Math.sin(arrowAngle + 0.5) * arrowSize
+                    );
+                    ctx.moveTo(endX, endY);
+                    ctx.lineTo(
+                        endX + Math.cos(arrowAngle - 0.5) * arrowSize,
+                        endY + Math.sin(arrowAngle - 0.5) * arrowSize
+                    );
+                    ctx.stroke();
+                }
+                
+                ctx.restore();
                 break;
                 
             case POWER_UP_TYPES.NEBULA_SHIFT:
-                // Nebula waves
+                // Enhanced nebula with swirling effect
+                ctx.save();
+                ctx.translate(this.x, floatY);
+                
+                // Central core
                 ctx.beginPath();
-                ctx.arc(this.x, this.y, this.radius * 0.3, 0, Math.PI * 2);
-                ctx.moveTo(this.x - this.radius * 0.8, this.y);
-                ctx.bezierCurveTo(
-                    this.x - this.radius * 0.5, this.y - this.radius * 0.5,
-                    this.x + this.radius * 0.5, this.y + this.radius * 0.5,
-                    this.x + this.radius * 0.8, this.y
-                );
-                ctx.moveTo(this.x - this.radius * 0.8, this.y + this.radius * 0.3);
-                ctx.bezierCurveTo(
-                    this.x - this.radius * 0.5, this.y + this.radius * 0.8,
-                    this.x + this.radius * 0.5, this.y - this.radius * 0.2,
-                    this.x + this.radius * 0.8, this.y + this.radius * 0.3
-                );
-                ctx.strokeStyle = '#ffffff';
+                ctx.arc(0, 0, this.radius * 0.3, 0, Math.PI * 2);
+                ctx.fillStyle = '#ffffff';
+                ctx.fill();
+                
+                // Swirling particles
+                for (let i = 0; i < 8; i++) {
+                    const particleAngle = (i / 8) * Math.PI * 2 + this.angle * 2;
+                    const distance = this.radius * 0.8 + Math.sin(Date.now() * 0.01 + i) * 2;
+                    const px = Math.cos(particleAngle) * distance;
+                    const py = Math.sin(particleAngle) * distance;
+                    
+                    ctx.beginPath();
+                    ctx.arc(px, py, 2, 0, Math.PI * 2);
+                    ctx.fillStyle = '#a040ff';
+                    ctx.fill();
+                }
+                
+                // Connecting lines
+                ctx.beginPath();
+                for (let i = 0; i < 8; i++) {
+                    const particleAngle = (i / 8) * Math.PI * 2 + this.angle * 2;
+                    const distance = this.radius * 0.8 + Math.sin(Date.now() * 0.01 + i) * 2;
+                    const px = Math.cos(particleAngle) * distance;
+                    const py = Math.sin(particleAngle) * distance;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(px, py);
+                    } else {
+                        ctx.lineTo(px, py);
+                    }
+                }
+                ctx.closePath();
+                ctx.strokeStyle = 'rgba(160, 64, 255, 0.3)';
                 ctx.lineWidth = 1;
                 ctx.stroke();
+                
+                ctx.restore();
                 break;
         }
+        
+        // Restore context
+        ctx.restore();
     }
 }
 
