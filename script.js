@@ -6,7 +6,7 @@ const PLATFORM_WIDTH = 100;
 const PLATFORM_HEIGHT = 20;
 const SCROLL_SPEED = 3;
 const STAR_COUNT = 200;
-const COMET_SPEED_BOOST = 1.5;
+const COMET_SPEED_BOOST = 1.5;  
 const NEBULA_BOUNCE_MULTIPLIER = 1.3;
 const BLACK_HOLE_REVERSE_TIME = 3000;
 const TIME_WARP_DURATION = 5000; // 5 seconds
@@ -50,7 +50,8 @@ const POWER_UP_TYPES = {
     PULSAR: 'pulsar',       // Double jump
     TIME_WARP: 'time_warp', // Slow down time
     MAGNET: 'magnet',       // Attract collectibles
-    NEBULA_SHIFT: 'nebula_shift' // Phase through platforms
+    NEBULA_SHIFT: 'nebula_shift', // Phase through platforms
+    SCORE_MULTIPLIER: 'score_multiplier' // Score multiplier
 };
 
 // Hazard types
@@ -86,6 +87,11 @@ class Player {
         this.currentPlatform = null;
         // New property to track platforms the player has landed on for scoring
         this.visitedPlatforms = new Set();
+        this.activePowerUps = new Set();
+        
+        // Score multiplier properties
+        this.scoreMultiplier = 1.0; // Default multiplier
+        this.multiplierEndTime = 0; // Time when multiplier ends
     }
 
     update() {
@@ -193,7 +199,12 @@ class Player {
                 createParticles(this.x, this.y, 20, '#ffffff');
                 combo++;
                 if (combo % 5 === 0) {
-                    score += combo * 10; // Combo bonus
+                    let comboBonus = combo * 10; // Combo bonus
+                    // Apply score multiplier if active
+                    if (player.scoreMultiplier > 1.0 && Date.now() < player.multiplierEndTime) {
+                        comboBonus = Math.floor(comboBonus * player.scoreMultiplier);
+                    }
+                    score += comboBonus; // Combo bonus
                 }
             }
         }
@@ -210,6 +221,10 @@ class Player {
         // Only update score if it's higher than current score (player is moving upward)
         if (newScore > score) {
             score = newScore;
+            // Apply score multiplier if active
+            if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                score = Math.floor(score * this.scoreMultiplier);
+            }
             document.getElementById('score').textContent = `Score: ${score}`;
             if (score > highScore) {
                 highScore = score;
@@ -581,27 +596,57 @@ class Player {
                 // Just give points but don't activate the power-up again
                 switch (powerUp.type) {
                     case POWER_UP_TYPES.STARDUST:
-                        score += 25; // Reduced points for duplicate
+                        let dupStardustScore = 25; // Reduced points for duplicate
+                        // Apply score multiplier if active
+                        if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                            dupStardustScore = Math.floor(dupStardustScore * this.scoreMultiplier);
+                        }
+                        score += dupStardustScore;
                         createParticles(this.x, this.y, 8, '#ffff80');
                         break;
                     case POWER_UP_TYPES.CRYSTAL:
-                        score += 30; // Reduced points for duplicate
+                        let dupCrystalScore = 30; // Reduced points for duplicate
+                        // Apply score multiplier if active
+                        if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                            dupCrystalScore = Math.floor(dupCrystalScore * this.scoreMultiplier);
+                        }
+                        score += dupCrystalScore;
                         createParticles(this.x, this.y, 10, '#80ffff');
                         break;
                     case POWER_UP_TYPES.PULSAR:
-                        score += 35; // Reduced points for duplicate
+                        let dupPulsarScore = 35; // Reduced points for duplicate
+                        // Apply score multiplier if active
+                        if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                            dupPulsarScore = Math.floor(dupPulsarScore * this.scoreMultiplier);
+                        }
+                        score += dupPulsarScore;
                         createParticles(this.x, this.y, 12, '#ff80ff');
                         break;
                     case POWER_UP_TYPES.TIME_WARP:
-                        score += 40; // Reduced points for duplicate
+                        let dupTimeWarpScore = 40; // Reduced points for duplicate
+                        // Apply score multiplier if active
+                        if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                            dupTimeWarpScore = Math.floor(dupTimeWarpScore * this.scoreMultiplier);
+                        }
+                        score += dupTimeWarpScore;
                         createParticles(this.x, this.y, 15, '#40ffff');
                         break;
                     case POWER_UP_TYPES.MAGNET:
-                        score += 35; // Reduced points for duplicate
+                        let dupMagnetScore = 35; // Reduced points for duplicate
+                        // Apply score multiplier if active
+                        if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                            dupMagnetScore = Math.floor(dupMagnetScore * this.scoreMultiplier);
+                        }
+                        score += dupMagnetScore;
                         createParticles(this.x, this.y, 12, '#ff8080');
                         break;
                     case POWER_UP_TYPES.NEBULA_SHIFT:
-                        score += 40; // Reduced points for duplicate
+                        let dupNebulaScore = 40; // Reduced points for duplicate
+                        // Apply score multiplier if active
+                        if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                            dupNebulaScore = Math.floor(dupNebulaScore * this.scoreMultiplier);
+                        }
+                        score += dupNebulaScore;
                         createParticles(this.x, this.y, 15, '#a040ff');
                         break;
                 }
@@ -616,7 +661,12 @@ class Player {
         
         switch (powerUp.type) {
             case POWER_UP_TYPES.STARDUST:
-                score += 50;
+                let stardustScore = 50;
+                // Apply score multiplier if active
+                if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                    stardustScore = Math.floor(stardustScore * this.scoreMultiplier);
+                }
+                score += stardustScore;
                 createParticles(this.x, this.y, 15, '#ffff80');
                 
                 // Track stardust collection
@@ -746,7 +796,12 @@ class Player {
         
         // Bonus for collecting while invincible
         if (this.isInvincible) {
-            score += 100;
+            let invincibleBonus = 100;
+            // Apply score multiplier if active
+            if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                invincibleBonus = Math.floor(invincibleBonus * this.scoreMultiplier);
+            }
+            score += invincibleBonus;
             if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 15, '#ffffff');
@@ -754,7 +809,12 @@ class Player {
         
         // Bonus for collecting while phasing
         if (this.isPhasing) {
-            score += 50;
+            let phasingBonus = 50;
+            // Apply score multiplier if active
+            if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                phasingBonus = Math.floor(phasingBonus * this.scoreMultiplier);
+            }
+            score += phasingBonus;
             if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 10, '#a040ff');
@@ -762,7 +822,12 @@ class Player {
         
         // Bonus for collecting while magnet is active
         if (this.hasMagnet) {
-            score += 30;
+            let magnetBonus = 30;
+            // Apply score multiplier if active
+            if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                magnetBonus = Math.floor(magnetBonus * this.scoreMultiplier);
+            }
+            score += magnetBonus;
             if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 8, '#ff8080');
@@ -770,7 +835,12 @@ class Player {
         
         // Bonus for collecting while shielded
         if (this.hasShield) {
-            score += 20;
+            let shieldBonus = 20;
+            // Apply score multiplier if active
+            if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                shieldBonus = Math.floor(shieldBonus * this.scoreMultiplier);
+            }
+            score += shieldBonus;
             if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 6, '#80ffff');
@@ -778,7 +848,12 @@ class Player {
         
         // Bonus for collecting during high speed
         if (gameSpeed > 1.5) {
-            score += 75;
+            let highSpeedBonus = 75;
+            // Apply score multiplier if active
+            if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                highSpeedBonus = Math.floor(highSpeedBonus * this.scoreMultiplier);
+            }
+            score += highSpeedBonus;
             if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 12, '#ff4040');
@@ -786,7 +861,12 @@ class Player {
         
         // Bonus for collecting during slow speed
         if (gameSpeed < 0.5) {
-            score += 150;
+            let slowSpeedBonus = 150;
+            // Apply score multiplier if active
+            if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                slowSpeedBonus = Math.floor(slowSpeedBonus * this.scoreMultiplier);
+            }
+            score += slowSpeedBonus;
             if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 18, '#40ffff');
@@ -794,7 +874,12 @@ class Player {
         
         // Bonus for collecting while on the ground
         if (this.onGround) {
-            score += 25;
+            let groundBonus = 25;
+            // Apply score multiplier if active
+            if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                groundBonus = Math.floor(groundBonus * this.scoreMultiplier);
+            }
+            score += groundBonus;
             if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 5, '#ffffff');
@@ -802,7 +887,12 @@ class Player {
         
         // Bonus for collecting while in the air
         if (!this.onGround) {
-            score += 40;
+            let airBonus = 40;
+            // Apply score multiplier if active
+            if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                airBonus = Math.floor(airBonus * this.scoreMultiplier);
+            }
+            score += airBonus;
             if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 8, '#a0a0ff');
@@ -810,7 +900,12 @@ class Player {
         
         // Bonus for collecting while moving fast horizontally
         if (Math.abs(this.velocityX) > 6) {
-            score += 60;
+            let fastHorizontalBonus = 60;
+            // Apply score multiplier if active
+            if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                fastHorizontalBonus = Math.floor(fastHorizontalBonus * this.scoreMultiplier);
+            }
+            score += fastHorizontalBonus;
             if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 10, '#40a0ff');
@@ -818,7 +913,12 @@ class Player {
         
         // Bonus for collecting while moving fast vertically
         if (Math.abs(this.velocityY) > 8) {
-            score += 60;
+            let fastVerticalBonus = 60;
+            // Apply score multiplier if active
+            if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                fastVerticalBonus = Math.floor(fastVerticalBonus * this.scoreMultiplier);
+            }
+            score += fastVerticalBonus;
             if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 10, '#ff40a0');
@@ -826,7 +926,12 @@ class Player {
         
         // Bonus for collecting near the top of the screen
         if (this.y < canvas.height * 0.3) {
-            score += 80;
+            let topBonus = 80;
+            // Apply score multiplier if active
+            if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                topBonus = Math.floor(topBonus * this.scoreMultiplier);
+            }
+            score += topBonus;
             if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 15, '#d080ff');
@@ -834,7 +939,12 @@ class Player {
         
         // Bonus for collecting near the bottom of the screen
         if (this.y > canvas.height * 0.7) {
-            score += 80;
+            let bottomBonus = 80;
+            // Apply score multiplier if active
+            if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                bottomBonus = Math.floor(bottomBonus * this.scoreMultiplier);
+            }
+            score += bottomBonus;
             if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 15, '#40ff80');
@@ -842,7 +952,12 @@ class Player {
         
         // Bonus for collecting near the edges of the screen
         if (this.x < canvas.width * 0.2 || this.x > canvas.width * 0.8) {
-            score += 70;
+            let edgeBonus = 70;
+            // Apply score multiplier if active
+            if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                edgeBonus = Math.floor(edgeBonus * this.scoreMultiplier);
+            }
+            score += edgeBonus;
             if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 12, '#ff8040');
@@ -850,7 +965,12 @@ class Player {
         
         // Bonus for collecting in the center of the screen
         if (this.x > canvas.width * 0.4 && this.x < canvas.width * 0.6) {
-            score += 90;
+            let centerBonus = 90;
+            // Apply score multiplier if active
+            if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                centerBonus = Math.floor(centerBonus * this.scoreMultiplier);
+            }
+            score += centerBonus;
             if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 18, '#8040ff');
@@ -863,7 +983,12 @@ class Player {
             
             // Bonus for quick collection
             if (this.quickCollectCombo >= 3) {
-                score += this.quickCollectCombo * 20;
+                let quickCollectionBonus = this.quickCollectCombo * 20;
+                // Apply score multiplier if active
+                if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                    quickCollectionBonus = Math.floor(quickCollectionBonus * this.scoreMultiplier);
+                }
+                score += quickCollectionBonus;
                 if (score < 0) score = 0; // Ensure score doesn't go below 0
                 document.getElementById('score').textContent = `Score: ${score}`;
                 
@@ -884,7 +1009,12 @@ class Player {
             
             // Bonus for collecting same type multiple times
             if (this.sameTypeStreak >= 3) {
-                score += this.sameTypeStreak * 30;
+                let sameTypeBonus = this.sameTypeStreak * 30;
+                // Apply score multiplier if active
+                if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                    sameTypeBonus = Math.floor(sameTypeBonus * this.scoreMultiplier);
+                }
+                score += sameTypeBonus;
                 if (score < 0) score = 0; // Ensure score doesn't go below 0
                 document.getElementById('score').textContent = `Score: ${score}`;
                 createParticles(this.x, this.y, 15, '#ffffff');
@@ -916,7 +1046,12 @@ class Player {
             }
             
             if (isAlternating && this.powerUpSequence.length >= 4) {
-                score += 200;
+                let sequenceBonus = 200;
+                // Apply score multiplier if active
+                if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                    sequenceBonus = Math.floor(sequenceBonus * this.scoreMultiplier);
+                }
+                score += sequenceBonus;
                 if (score < 0) score = 0; // Ensure score doesn't go below 0
                 document.getElementById('score').textContent = `Score: ${score}`;
                 createParticles(this.x, this.y, 30, '#ffff80');
@@ -932,7 +1067,12 @@ class Player {
         // Combo bonus
         combo++;
         if (combo % 5 === 0) {
-            score += combo * 10; // Combo bonus
+            let comboBonus = combo * 10; // Combo bonus
+            // Apply score multiplier if active
+            if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                comboBonus = Math.floor(comboBonus * this.scoreMultiplier);
+            }
+            score += comboBonus;
             if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             
@@ -977,14 +1117,24 @@ class Player {
         
         // Bonus for collecting power-ups at high combo
         if (combo > 30) {
-            score += combo;
+            let highComboBonus = combo;
+            // Apply score multiplier if active
+            if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                highComboBonus = Math.floor(highComboBonus * this.scoreMultiplier);
+            }
+            score += highComboBonus;
             if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
         }
         
         // Bonus for collecting power-ups while at maximum jumps
         if (this.jumps >= this.maxJumps) {
-            score += 100;
+            let maxJumpBonus = 100;
+            // Apply score multiplier if active
+            if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                maxJumpBonus = Math.floor(maxJumpBonus * this.scoreMultiplier);
+            }
+            score += maxJumpBonus;
             if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 20, '#ff80ff');
@@ -992,7 +1142,12 @@ class Player {
         
         // Bonus for collecting power-ups while at low jumps (fresh start)
         if (this.jumps === 0) {
-            score += 50;
+            let freshStartBonus = 50;
+            // Apply score multiplier if active
+            if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                freshStartBonus = Math.floor(freshStartBonus * this.scoreMultiplier);
+            }
+            score += freshStartBonus;
             if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 10, '#40ff40');
@@ -1000,7 +1155,12 @@ class Player {
         
         // Bonus for collecting power-ups after a long time (patience reward)
         if (this.lastPowerUpTime > 0 && Date.now() - this.lastPowerUpTime > 5000) {
-            score += 150;
+            let patienceBonus = 150;
+            // Apply score multiplier if active
+            if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                patienceBonus = Math.floor(patienceBonus * this.scoreMultiplier);
+            }
+            score += patienceBonus;
             if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 25, '#ffff40');
@@ -1008,7 +1168,12 @@ class Player {
         
         // Bonus for collecting power-ups in quick succession (speed reward)
         if (this.lastPowerUpTime > 0 && Date.now() - this.lastPowerUpTime < 500) {
-            score += 100;
+            let quickSuccessionBonus = 100;
+            // Apply score multiplier if active
+            if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                quickSuccessionBonus = Math.floor(quickSuccessionBonus * this.scoreMultiplier);
+            }
+            score += quickSuccessionBonus;
             if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 20, '#40ffff');
@@ -1016,7 +1181,12 @@ class Player {
         
         // Bonus for collecting power-ups with a full combo
         if (this.quickCollectCombo >= 5) {
-            score += 200;
+            let fullComboBonus = 200;
+            // Apply score multiplier if active
+            if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                fullComboBonus = Math.floor(fullComboBonus * this.scoreMultiplier);
+            }
+            score += fullComboBonus;
             if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             createParticles(this.x, this.y, 30, '#ff40ff');
@@ -1036,7 +1206,12 @@ class Player {
             }
             
             // Bonus points
-            score += 500;
+            let allTypesBonus = 500;
+            // Apply score multiplier if active
+            if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+                allTypesBonus = Math.floor(allTypesBonus * this.scoreMultiplier);
+            }
+            score += allTypesBonus;
             if (score < 0) score = 0; // Ensure score doesn't go below 0
             document.getElementById('score').textContent = `Score: ${score}`;
             
@@ -1091,6 +1266,36 @@ class Player {
                         this.activePowerUps.delete(POWER_UP_TYPES.NEBULA_SHIFT);
                     }
                 }, 1500); // 1.5 seconds (was 2500)
+                break;
+                
+            case POWER_UP_TYPES.SCORE_MULTIPLIER:
+                // Activate score multiplier with random tier
+                const multiplierTier = Math.random();
+                if (multiplierTier < 0.2) { // 20% chance for 3x multiplier
+                    this.scoreMultiplier = 3.0;
+                    this.multiplierEndTime = Date.now() + 5000; // 5 seconds for 3x
+                    createParticles(this.x, this.y, 50, '#ffcc00'); // Orange particles for 3x
+                } else { // 80% chance for 2x multiplier
+                    this.scoreMultiplier = 2.0;
+                    this.multiplierEndTime = Date.now() + 8000; // 8 seconds for 2x
+                    createParticles(this.x, this.y, 40, '#ffff00'); // Yellow particles for 2x
+                }
+                
+                // Add to active power-ups
+                this.activePowerUps.add(POWER_UP_TYPES.SCORE_MULTIPLIER);
+                
+                // Remove multiplier after duration
+                const duration = this.multiplierEndTime - Date.now();
+                setTimeout(() => {
+                    this.scoreMultiplier = 1.0; // Reset multiplier
+                    // Remove from active power-ups when duration ends
+                    if (this.activePowerUps) {
+                        this.activePowerUps.delete(POWER_UP_TYPES.SCORE_MULTIPLIER);
+                    }
+                    
+                    // Visual feedback when multiplier ends
+                    createParticles(this.x, this.y, 20, '#ffff80');
+                }, duration); // Dynamic duration
                 break;
         }
         
@@ -1194,6 +1399,27 @@ class Player {
         ctx.shadowBlur = 20;
         ctx.fill();
         ctx.shadowBlur = 0;
+        
+        // Draw score multiplier indicator if active
+        if (this.scoreMultiplier > 1.0 && Date.now() < this.multiplierEndTime) {
+            const remainingTime = (this.multiplierEndTime - Date.now()) / 1000; // in seconds
+            const alpha = Math.min(1, remainingTime / 3); // Fade out in last 3 seconds
+            
+            // Choose color based on multiplier value
+            let multiplierColor = '#ffff00'; // Yellow for 2x
+            if (this.scoreMultiplier >= 3.0) {
+                multiplierColor = '#ffcc00'; // Orange for 3x
+            }
+            
+            ctx.font = '12px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillStyle = `rgba(255, ${this.scoreMultiplier >= 3.0 ? 204 : 255}, 0, ${alpha})`;
+            ctx.shadowColor = multiplierColor;
+            ctx.shadowBlur = 10;
+            ctx.fillText(`${this.scoreMultiplier}x`, this.x, this.y - this.radius - 10);
+            ctx.shadowBlur = 0;
+            ctx.textAlign = 'left';
+        }
     }
 }
 
@@ -1583,6 +1809,41 @@ class PowerUp {
         
         // Type-specific drawing with enhanced animations
         switch (this.type) {
+            case POWER_UP_TYPES.SCORE_MULTIPLIER:
+                // Enhanced score multiplier visualization
+                ctx.save();
+                ctx.translate(this.x, floatY);
+                
+                // Draw star-like shape
+                ctx.beginPath();
+                for (let i = 0; i < 5; i++) {
+                    const angle = (i * 2 * Math.PI / 5) - Math.PI/2;
+                    const outerX = Math.cos(angle) * this.radius * 1.5;
+                    const outerY = Math.sin(angle) * this.radius * 1.5;
+                    const innerX = Math.cos(angle + Math.PI/5) * this.radius * 0.6;
+                    const innerY = Math.sin(angle + Math.PI/5) * this.radius * 0.6;
+                    
+                    if (i === 0) {
+                        ctx.moveTo(outerX, outerY);
+                    } else {
+                        ctx.lineTo(outerX, outerY);
+                    }
+                    ctx.lineTo(innerX, innerY);
+                }
+                ctx.closePath();
+                ctx.fillStyle = '#ffff00';
+                ctx.fill();
+                
+                // Draw 'x' symbol in the center
+                ctx.font = 'bold 12px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillStyle = '#000000';
+                ctx.fillText('2x', 0, 0);
+                
+                ctx.restore();
+                break;
+            
             case POWER_UP_TYPES.STARDUST:
                 // Enhanced sparkle effect
                 ctx.save();
@@ -2243,6 +2504,26 @@ function gameLoop() {
     // Draw player
     player.draw();
     
+    // Draw active score multiplier indicator if active
+    if (player.scoreMultiplier > 1.0 && Date.now() < player.multiplierEndTime) {
+        const remainingTime = (player.multiplierEndTime - Date.now()) / 1000; // in seconds
+        const alpha = Math.min(1, remainingTime / 2); // Fade out in last 2 seconds
+        
+        // Choose color based on multiplier value
+        let multiplierColor = '#ffff00'; // Yellow for 2x
+        if (player.scoreMultiplier >= 3.0) {
+            multiplierColor = '#ffcc00'; // Orange for 3x
+        }
+        
+        ctx.font = 'bold 24px Arial';
+        ctx.textAlign = 'right';
+        ctx.fillStyle = `rgba(255, ${player.scoreMultiplier >= 3.0 ? 204 : 255}, 0, ${alpha})`;
+        ctx.shadowColor = multiplierColor;
+        ctx.shadowBlur = 15;
+        ctx.fillText(`SCORE x${player.scoreMultiplier}`, canvas.width - 20, 50);
+        ctx.shadowBlur = 0;
+    }
+    
     // Restore context if screen shake was applied
     if (screenShake > 0) {
         ctx.restore();
@@ -2252,85 +2533,45 @@ function gameLoop() {
     requestAnimationFrame(gameLoop);
 }
 
-// Game over function
+// Game over function - REMOVED
 function gameOver() {
-    gameRunning = false;
+    // Game over functionality has been removed
+    // Player continues playing instead of game over
     
-    // Create explosion particles
-    createParticles(player.x, player.y, 100, '#ff4040');
+    // Create some particles to indicate hit
+    createParticles(player.x, player.y, 30, '#ff4040');
     
-    // Display game over screen
-    setTimeout(() => {
-        // Animated game over screen
-        function animateGameOver() {
-            if (!gameRunning) {
-                // Darken background
-                ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
-                // Pulsing game over text
-                const pulse = Math.abs(Math.sin(Date.now() / 800)) * 0.3 + 0.7;
-                
-                ctx.font = '48px Arial';
-                ctx.textAlign = 'center';
-                ctx.fillStyle = '#ffffff';
-                ctx.shadowColor = '#ff4040';
-                ctx.shadowBlur = 20 * pulse;
-                ctx.fillText('GAME OVER', canvas.width/2, canvas.height/2 - 50);
-                
-                ctx.font = '24px Arial';
-                ctx.shadowBlur = 10;
-                ctx.fillText(`Final Score: ${score}`, canvas.width/2, canvas.height/2 + 20);
-                ctx.fillText(`High Score: ${highScore}`, canvas.width/2, canvas.height/2 + 60);
-                
-                // Blinking restart text
-                if (Math.sin(Date.now() / 500) > 0) {
-                    ctx.fillText('Press R to Restart', canvas.width/2, canvas.height/2 + 120);
-                }
-                
-                ctx.shadowBlur = 0;
-                ctx.textAlign = 'left';
-                
-                requestAnimationFrame(animateGameOver);
-            }
-        }
-        
-        animateGameOver();
-    }, 1000);
-}
-
-// Restart game function
-function restartGame() {
-    // Reset game state
-    platforms = [];
-    powerUps = [];
-    hazards = [];
-    particles = [];
-    score = 0;
-    combo = 0;
-    gameRunning = true;
-    currentGravity = GRAVITY;
-    gameSpeed = 1;
-    
-    // Reset player
-    player = new Player();
-    
-    // Create initial platforms
-    createInitialPlatforms();
-    
-    // Update score display
-    document.getElementById('score').textContent = `Score: ${score}`;
-    document.getElementById('highScore').textContent = `High Score: ${highScore}`;
-    document.getElementById('combo').textContent = `Combo: ${combo}`;
-}
-
-// Keyboard controls
-document.addEventListener('keydown', (e) => {
-    if (e.key === 'r' || e.key === 'R') {
-        if (!gameRunning) {
-            restartGame();
-        }
+    // Reset player position if needed
+    if (player.y > canvas.height + 100) {
+        player.y = canvas.height - 200;
+        player.x = canvas.width / 2;
+        player.velocityY = 0;
+        player.velocityX = 0;
     }
+}
+
+// Restart game function - REMOVED
+function restartGame() {
+    // Restart functionality has been removed
+    // Game continues instead of restarting
+    
+    // Instead, reset player position
+    player.y = canvas.height - 200;
+    player.x = canvas.width / 2;
+    player.velocityY = 0;
+    player.velocityX = 0;
+    
+    // Reset player abilities
+    player.hasShield = false;
+    player.hasMagnet = false;
+    player.isPhasing = false;
+    player.isInvincible = false;
+}
+
+// Keyboard controls - restart removed
+document.addEventListener('keydown', (e) => {
+    // Restart functionality has been removed
+    // Game continues instead of restarting
 });
 
 // Start the game when page loads
